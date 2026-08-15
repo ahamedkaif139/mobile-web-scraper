@@ -44,11 +44,12 @@ th{position:sticky;top:0;background:#f4f6f8}
 <label>Start URL</label>
 <input id="url" type="url" placeholder="https://example.com/products">
 
-<label>Item selector <span class="small">(required)</span></label>
-<input id="item" placeholder="article.product_pod">
+<label>Item selector <span class="small">(optional — auto-detected if blank)</span></label>
+<input id="item" placeholder="Leave blank for automatic detection">
 
-<label>Next-page selector <span class="small">(required)</span></label>
-<input id="next" placeholder="li.next a">
+<label>Next-page selector <span class="small">(optional — auto-detected if blank)</span></label>
+<input id="next" placeholder="Leave blank for automatic pagination detection">
+<div class="help" style="margin-top:6px">Only the URL is required. Leave both selectors blank to let the scraper detect repeating items and normal HTML pagination.</div>
 
 <div class="row">
 <div><label>Maximum pages</label><input id="pages" type="number" value="10" min="1" max="1000"></div>
@@ -57,7 +58,7 @@ th{position:sticky;top:0;background:#f4f6f8}
 
 <details style="margin-top:16px">
 <summary><b>Advanced field extraction</b></summary>
-<p class="small">If you add fields, each item becomes multiple CSV/XLSX/JSON columns. If you leave this empty, the original one-column text mode is used.</p>
+<p class="small">If you add fields, each item becomes multiple CSV/XLSX/JSON columns. If you leave this empty, useful fields are detected automatically.</p>
 <div id="fields"></div>
 <div class="actions">
 <button class="secondary" onclick="addField()">＋ Add field</button>
