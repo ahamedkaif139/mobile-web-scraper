@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mobile Web Scraper</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f5f8;color:#18202a;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.container{width:min(760px,100%);margin:auto;padding:14px}
+.card{background:white;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 3px 18px #00000010}
+h1{font-size:24px;margin:0 0 5px}
+.sub{color:#68717c;font-size:14px;margin-bottom:16px}
+label{display:block;font-weight:700;font-size:14px;margin:14px 0 7px}
+input,select{width:100%;padding:13px;border:1px solid #d6dbe1;border-radius:11px;font-size:15px;background:white}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{border:0;border-radius:11px;padding:13px 15px;font-size:15px;font-weight:700;cursor:pointer}
+.primary{background:#1769ff;color:white;width:100%}
+.danger{background:#ffe8e8;color:#b00020}
+.download{background:#e8f1ff;color:#0758d8;width:100%;margin-top:10px}
+button:disabled{opacity:.5}
+.status{display:flex;gap:10px;flex-wrap:wrap}
+.badge{background:#eef1f5;padding:8px 11px;border-radius:10px;font-size:13px}
+.running{background:#fff2cc}
+.done{background:#e7f7ed}
+.error{color:#b00020;background:#ffe8e8;padding:10px;border-radius:10px}
+#logs{background:#111820;color:#d7e0e8;border-radius:12px;padding:12px;height:220px;overflow:auto;font:12px/1.6 monospace;white-space:pre-wrap}
+.help{font-size:13px;color:#66717c;line-height:1.5}
+@media(max-width:520px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="card">
+<h1>📱 Mobile Web Scraper</h1>
+<div class="sub">Requests + BeautifulSoup • classic pagination</div>
+
+<label>Start URL</label>
+<input id="url" type="url" placeholder="https://example.com/products">
+
+<label>Item selector</label>
+<input id="item" placeholder=".product-title">
+
+<label>Next-page selector</label>
+<input id="next" placeholder="a.next">
+
+<div class="row">
+<div>
+<label>Maximum pages</label>
+<input id="pages" type="number" value="100" min="1" max="1000">
+</div>
+<div>
+<label>Delay (seconds)</label>
+<input id="delay" type="number" value="1.5" min="0.5" max="60" step="0.1">
+</div>
+</div>
+
+<label>Extract</label>
+<select id="mode">
+<option value="text">Text from each item</option>
+<option value="link">Link (href)</option>
+<option value="attribute">An HTML attribute</option>
+</select>
+
+<div id="attributeBox" style="display:none">
+<label>Attribute name</label>
+<input id="attribute" placeholder="data-id">
+</div>
+
+<button id="start" class="primary" onclick="startScraping()">▶ Start scraping</button>
+<button id="stop" class="danger" onclick="stopScraping()" style="width:100%;margin-top:10px">■ Stop</button>
+</div>
+
+<div class="card">
+<div class="status">
+<div class="badge">Status: <b id="status">Idle</b></div>
+<div class="badge">Page: <b id="page">0</b></div>
+<div class="badge">Items: <b id="items">0</b></div>
+</div>
+</div>
+
+<div class="card">
+<h3>Progress</h3>
+<div id="logs">Ready.</div>
+<div id="error"></div>
+<a id="download" href="/download" style="display:none">
+<button class="download">⬇ Download output.csv</button>
+</a>
+</div>
+
+<div class="card help">
+<b>Example selectors</b><br>
+Product title: <code>.product-title</code><br>
+Next link: <code>a.next</code> or <code>a[rel="next"]</code><br><br>
+This version follows normal HTML pagination. It does not execute JavaScript or infinite-scroll code.
+</div>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let timer = null;
+
+$("mode").addEventListener("change", () => {
+  $("attributeBox").style.display =
+    $("mode").value === "attribute" ? "block" : "none";
+});
+
+async function startScraping(){
+  $("error").innerHTML="";
+  $("download").style.display="none";
+
+  const payload={
+    start_url:$("url").value.trim(),
+    item_selector:$("item").value.trim(),
+    next_selector:$("next").value.trim(),
+    max_pages:Number($("pages").value),
+    delay:Number($("delay").value),
+    field_mode:$("mode").value,
+    field_selector:$("attribute").value.trim()
+  };
+
+  try{
+    const r=await fetch("/start",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(payload)
+    });
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.error||"Could not start.");
+    $("download").style.display="none";
+    poll();
+  }catch(e){
+    $("error").innerHTML='<div class="error">'+escapeHtml(e.message)+'</div>';
+  }
+}
+
+async function stopScraping(){
+  await fetch("/stop",{method:"POST"});
+}
+
+async function poll(){
+  clearInterval(timer);
+  await update();
+  timer=setInterval(update,1000);
+}
+
+async function update(){
+  try{
+    const r=await fetch("/status");
+    const d=await r.json();
+
+    $("status").textContent=d.running?"Running":"Idle";
+    $("page").textContent=d.page;
+    $("items").textContent=d.items;
+
+    $("logs").textContent=(d.logs||[]).join("\n");
+    $("logs").scrollTop=$("logs").scrollHeight;
+
+    if(d.error){
+      $("error").innerHTML='<div class="error">'+escapeHtml(d.error)+'</div>';
+    }
+
+    if(!d.running && d.items>0){
+      $("download").style.display="block";
+    }
+  }catch(e){}
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,m=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",
+    '"':"&quot;","'":"&#039;"
+  }[m]));
+}
+</script>
+</body>
+  </html>
+  
