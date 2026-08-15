@@ -127,6 +127,116 @@ def extract_field(item, field, base_url):
     return extract_value(node, mode, attribute, base_url)
 
 
+def _selector_for_node(node):
+    """Build a compact CSS selector that is useful for repeated HTML cards."""
+    if not node or not getattr(node, "name", None):
+        return ""
+    classes = [c for c in node.get("class", []) if c and len(c) < 50 and not c.startswith(("js-", "data-"))]
+    # Prefer a small number of stable classes.
+    if classes:
+        return node.name + "".join("." + c.replace(" ", ".") for c in classes[:2])
+    return node.name
+
+
+def auto_detect_item_selector(soup):
+    """Guess a repeating item/card selector from normal server-rendered HTML."""
+    # Strong common patterns first.
+    preferred = [
+        "article.product_pod", "article", "li.product", 
+        ".product_pod", ".product-item", ".product-card", 
+        ".card", ".item", ".recipe", ".recipe-card", 
+        ".post", ".article", "main article", "ul li"
+    ]
+    for selector in preferred:
+        try:
+            nodes = soup.select(selector)
+            if 2 <= len(nodes) <= 500:
+                return selector
+        except Exception:
+            pass
+
+    # Look for repeated tag/class combinations.
+    counts = {}
+    for node in soup.find_all(["article", "li", "div", "section"], limit=2000):
+        if not node.get("class"):
+            continue
+        selector = _selector_for_node(node)
+        if not selector or selector in {"div", "li", "section", "article"}:
+            continue
+        try:
+            count = len(soup.select(selector))
+        except Exception:
+            continue
+        if 3 <= count <= 500:
+            # Prefer selectors whose nodes contain a link/image/title-like element.
+            sample = soup.select(selector)[:3]
+            score = count
+            for item in sample:
+                if item.select_one("h1,h2,h3,h4,h5,a,img"):
+                    score += 5
+            counts[selector] = score
+    if counts:
+        return max(counts, key=counts.get)
+    return "body"
+
+
+def auto_detect_next_selector(soup):
+    """Find a normal HTML pagination link, if present."""
+    candidates = [
+        'a[rel="next"]',
+        'link[rel="next"]',
+        'li.next a',
+        'a.next',
+        '.next a',
+        'a[aria-label*="next" i]',
+        'a[title*="next" i]',
+    ]
+    for selector in candidates:
+        try:
+            node = soup.select_one(selector)
+            if node and node.get("href"):
+                return selector
+        except Exception:
+            pass
+
+    for a in soup.find_all("a"):
+        label = clean_text(a.get_text(" ", strip=True)).lower()
+        aria = str(a.get("aria-label", "")).lower()
+        title = str(a.get("title", "")).lower()
+        if a.get("href") and (label in {"next", "next page", "›", "→", ">"} or "next page" in aria or aria == "next" or "next" in title):
+            return 'a[href="' + a.get("href", "").replace('"', '\\"') + '"]'
+    return ""
+
+
+def auto_detect_fields(item):
+    """Infer useful columns from a detected card without requiring selectors."""
+    fields = []
+    def add(name, selector, mode="text", attribute=""):
+        if not selector or any(f["name"] == name for f in fields):
+            return
+        if item.select_one(selector):
+            fields.append({"name": name, "selector": selector, "mode": mode, "attribute": attribute})
+
+    add("Title", "h1")
+    add("Title", "h2")
+    add("Title", "h3")
+    add("Title", "h4")
+    add("Title", ".title")
+    add("Title", ".name")
+    add("Price", ".price_color")
+    add("Price", ".price")
+    add("Price", "[class*='price']")
+    add("Availability", ".availability")
+    add("Availability", ".stock")
+    add("Rating", ".star-rating", "attribute", "class")
+    add("URL", "a", "href")
+    add("Image", "img", "src")
+
+    if not fields:
+        fields = [{"name": "Text", "selector": "", "mode": "text", "attribute": ""}]
+    return fields
+
+
 def extract_data(soup, item_selector, fields, base_url):
     try:
         items = soup.select(item_selector)
@@ -167,8 +277,8 @@ def validate_config(data):
     item_selector = str(data.get("item_selector", "")).strip()
     next_selector = str(data.get("next_selector", "")).strip()
 
-    if not start_url or not item_selector or not next_selector:
-        return None, "URL, item selector and next selector are required."
+    if not start_url:
+        return None, "URL is required."
 
     parsed = urlparse(start_url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
@@ -203,18 +313,8 @@ def validate_config(data):
                 "attribute": attribute,
             })
     else:
-        # Backward-compatible single-field mode.
-        mode = str(data.get("field_mode", "text")).strip().lower()
-        attribute = str(data.get("field_selector", "")).strip()
-        fields = [{
-            "name": "Title",
-            "selector": "",
-            "mode": "href" if mode == "link" else ("attribute" if mode == "attribute" else "text"),
-            "attribute": attribute,
-        }]
-
-    if not fields:
-        return None, "Add at least one extraction field."
+        # No fields supplied: infer useful columns from the first detected item.
+        fields = []
 
     return {
         "start_url": start_url,
@@ -261,6 +361,20 @@ def scraper_thread(config):
                     state["error"] = error
                 break
 
+            if not config["item_selector"]:
+                config["item_selector"] = auto_detect_item_selector(soup)
+                log(f"Auto-detected item selector: {config['item_selector']}")
+
+            if not config["fields"]:
+                try:
+                    first_item = soup.select_one(config["item_selector"])
+                except Exception:
+                    first_item = None
+                config["fields"] = auto_detect_fields(first_item) if first_item else [{"name": "Text", "selector": "", "mode": "text", "attribute": ""}]
+                with lock:
+                    state["columns"] = [field["name"] for field in config["fields"]]
+                log("Auto-detected extraction fields: " + ", ".join(field["name"] for field in config["fields"]))
+
             page_data, extraction_error = extract_data(
                 soup,
                 config["item_selector"],
@@ -280,9 +394,13 @@ def scraper_thread(config):
 
             log(f"Found {len(page_data)} items on page {page}. Total: {state['items']}")
 
+            next_selector = config["next_selector"] or auto_detect_next_selector(soup)
+            if next_selector and not config["next_selector"]:
+                config["next_selector"] = next_selector
+                log(f"Auto-detected next-page selector: {next_selector}")
             next_url, next_error = get_next_page(
-                soup, url, config["next_selector"]
-            )
+                soup, url, next_selector
+            ) if next_selector else (None, None)
             if next_error:
                 log(next_error)
 
