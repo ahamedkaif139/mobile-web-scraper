@@ -1,32 +1,35 @@
-# Mobile Python Web Scraper
+# Mobile Web Scraper v2
 
-A mobile-friendly Flask interface around the original requests + BeautifulSoup pagination scraper.
+Mobile-friendly Flask scraper based on the original repository.
 
-## Run locally
+## Features
 
+- Required URL, item selector and next-page selector
+- Normal HTML pagination
+- Multiple extraction fields per item
+- Text, href, src, arbitrary attribute and raw HTML extraction
+- CSV export with UTF-8 BOM
+- XLSX export using openpyxl
+- JSON export with Unicode preserved
+- Result preview
+- Progress/status/logs
+- Clear HTTP/network/selector errors
+- Backward-compatible simple one-column extraction
+- Mobile-friendly field builder
+- Basic result-theme detection (recipe/product/article/channel)
+
+## Run
+
+```bash
 pip install -r requirements.txt
 python app.py
+```
 
-## Render
+For Render:
 
-Create a Render Web Service from this GitHub repository.
+```text
+Build: pip install -r requirements.txt
+Start: gunicorn app:app --bind 0.0.0.0:$PORT
+```
 
-Build:
-pip install -r requirements.txt
-
-Start:
-gunicorn app:app --bind 0.0.0.0:$PORT
-
-The free plan is suitable for testing. Do not use it as a permanent high-volume scraping service.
-
-## Usage
-
-1. Enter a page URL.
-2. Enter the CSS selector for each item.
-3. Enter the CSS selector for the next-page link.
-4. Set maximum pages and delay.
-5. Choose text, href, or an HTML attribute.
-6. Start scraping.
-7. Download output.csv when finished.
-
-Only scrape sites you are permitted to access and respect their robots.txt, terms, rate limits, and applicable law.
+The scraper does not execute JavaScript or infinite-scroll code and does not bypass access controls.
