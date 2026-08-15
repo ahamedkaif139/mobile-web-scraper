@@ -7,69 +7,69 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f3f5f8;color:#18202a;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-.container{width:min(760px,100%);margin:auto;padding:14px}
+.container{width:min(980px,100%);margin:auto;padding:14px}
 .card{background:white;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 3px 18px #00000010}
-h1{font-size:24px;margin:0 0 5px}
-.sub{color:#68717c;font-size:14px;margin-bottom:16px}
+h1{font-size:24px;margin:0 0 5px}.sub{color:#68717c;font-size:14px;margin-bottom:16px}
 label{display:block;font-weight:700;font-size:14px;margin:14px 0 7px}
-input,select{width:100%;padding:13px;border:1px solid #d6dbe1;border-radius:11px;font-size:15px;background:white}
+input,select{width:100%;padding:12px;border:1px solid #d6dbe1;border-radius:11px;font-size:15px;background:white}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-button{border:0;border-radius:11px;padding:13px 15px;font-size:15px;font-weight:700;cursor:pointer}
-.primary{background:#1769ff;color:white;width:100%}
-.danger{background:#ffe8e8;color:#b00020}
-.download{background:#e8f1ff;color:#0758d8;width:100%;margin-top:10px}
+button{border:0;border-radius:11px;padding:12px 15px;font-size:15px;font-weight:700;cursor:pointer}
+.primary{background:#1769ff;color:white;width:100%}.danger{background:#ffe8e8;color:#b00020;width:100%;margin-top:10px}
+.secondary{background:#eef2f7;color:#243040}.download{background:#e8f1ff;color:#0758d8;flex:1}
 button:disabled{opacity:.5}
-.status{display:flex;gap:10px;flex-wrap:wrap}
-.badge{background:#eef1f5;padding:8px 11px;border-radius:10px;font-size:13px}
-.running{background:#fff2cc}
-.done{background:#e7f7ed}
-.error{color:#b00020;background:#ffe8e8;padding:10px;border-radius:10px}
-#logs{background:#111820;color:#d7e0e8;border-radius:12px;padding:12px;height:220px;overflow:auto;font:12px/1.6 monospace;white-space:pre-wrap}
+.status{display:flex;gap:10px;flex-wrap:wrap}.badge{background:#eef1f5;padding:8px 11px;border-radius:10px;font-size:13px}
+.field{border:1px solid #e0e5ea;border-radius:14px;padding:12px;margin:10px 0;background:#fafbfd}
+.field-grid{display:grid;grid-template-columns:1.1fr 1.5fr 1fr 1fr auto;gap:8px;align-items:end}
+.small{font-size:12px;color:#68717c}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.error{color:#b00020;background:#ffe8e8;padding:10px;border-radius:10px;margin-top:10px}
+#logs{background:#111820;color:#d7e0e8;border-radius:12px;padding:12px;height:180px;overflow:auto;font:12px/1.6 monospace;white-space:pre-wrap}
+.preview-wrap{overflow:auto;max-height:430px;border:1px solid #e0e5ea;border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:600px;font-size:13px}
+th,td{border-bottom:1px solid #e5e8eb;padding:9px;text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:#f4f6f8}
 .help{font-size:13px;color:#66717c;line-height:1.5}
-@media(max-width:520px){.row{grid-template-columns:1fr}}
+.hidden{display:none}
+.theme-pill{float:right;font-size:12px;background:#eef1f5;padding:6px 9px;border-radius:999px}
+@media(max-width:700px){.field-grid{grid-template-columns:1fr 1fr}.field-grid .wide{grid-column:1/-1}.row{grid-template-columns:1fr}}
+@media(max-width:480px){.field-grid{grid-template-columns:1fr}.field-grid .wide{grid-column:auto}.actions button{width:100%}}
 </style>
 </head>
 <body>
 <div class="container">
-
 <div class="card">
+<span class="theme-pill" id="detectedTheme">General</span>
 <h1>📱 Mobile Web Scraper</h1>
-<div class="sub">Requests + BeautifulSoup • classic pagination</div>
+<div class="sub">HTML • CSS selectors • pagination • CSV • XLSX • JSON</div>
 
 <label>Start URL</label>
 <input id="url" type="url" placeholder="https://example.com/products">
 
-<label>Item selector</label>
-<input id="item" placeholder=".product-title">
+<label>Item selector <span class="small">(required)</span></label>
+<input id="item" placeholder="article.product_pod">
 
-<label>Next-page selector</label>
-<input id="next" placeholder="a.next">
+<label>Next-page selector <span class="small">(required)</span></label>
+<input id="next" placeholder="li.next a">
 
 <div class="row">
-<div>
-<label>Maximum pages</label>
-<input id="pages" type="number" value="100" min="1" max="1000">
-</div>
-<div>
-<label>Delay (seconds)</label>
-<input id="delay" type="number" value="1.5" min="0.5" max="60" step="0.1">
-</div>
+<div><label>Maximum pages</label><input id="pages" type="number" value="10" min="1" max="1000"></div>
+<div><label>Delay (seconds)</label><input id="delay" type="number" value="1.5" min="0.5" max="60" step="0.1"></div>
 </div>
 
-<label>Extract</label>
-<select id="mode">
-<option value="text">Text from each item</option>
-<option value="link">Link (href)</option>
-<option value="attribute">An HTML attribute</option>
-</select>
-
-<div id="attributeBox" style="display:none">
-<label>Attribute name</label>
-<input id="attribute" placeholder="data-id">
+<details style="margin-top:16px">
+<summary><b>Advanced field extraction</b></summary>
+<p class="small">If you add fields, each item becomes multiple CSV/XLSX/JSON columns. If you leave this empty, the original one-column text mode is used.</p>
+<div id="fields"></div>
+<div class="actions">
+<button class="secondary" onclick="addField()">＋ Add field</button>
+<button class="secondary" onclick="addRecipePreset()">🍳 Recipe preset</button>
+<button class="secondary" onclick="addProductPreset()">🛒 Product preset</button>
 </div>
+</details>
 
+<div style="margin-top:16px">
 <button id="start" class="primary" onclick="startScraping()">▶ Start scraping</button>
-<button id="stop" class="danger" onclick="stopScraping()" style="width:100%;margin-top:10px">■ Stop</button>
+<button id="stop" class="danger" onclick="stopScraping()">■ Stop</button>
+</div>
 </div>
 
 <div class="card">
@@ -84,97 +84,161 @@ button:disabled{opacity:.5}
 <h3>Progress</h3>
 <div id="logs">Ready.</div>
 <div id="error"></div>
-<a id="download" href="/download" style="display:none">
-<button class="download">⬇ Download output.csv</button>
-</a>
+</div>
+
+<div class="card">
+<h3>Preview</h3>
+<div id="previewHint" class="help">Run a scrape to see the first 500 rows here.</div>
+<div class="preview-wrap hidden" id="previewWrap"><table id="preview"></table></div>
+<div class="actions">
+<a id="csv" class="download hidden" href="/download.csv"><button class="download">⬇ CSV</button></a>
+<a id="xlsx" class="download hidden" href="/download.xlsx"><button class="download">⬇ XLSX</button></a>
+<a id="json" class="download hidden" href="/download.json"><button class="download">⬇ JSON</button></a>
+</div>
 </div>
 
 <div class="card help">
-<b>Example selectors</b><br>
-Product title: <code>.product-title</code><br>
-Next link: <code>a.next</code> or <code>a[rel="next"]</code><br><br>
-This version follows normal HTML pagination. It does not execute JavaScript or infinite-scroll code.
+<b>How it works</b><br>
+This tool fetches normal HTML with Requests + BeautifulSoup. It does not execute JavaScript or infinite-scroll code.
+It cannot bypass a website's access controls. A 403 is reported as a website rejection rather than a selector error.
+Only scrape sites you are permitted to access and respect robots.txt, terms, rate limits and applicable law.
 </div>
-
 </div>
 
 <script>
-const $ = id => document.getElementById(id);
-let timer = null;
+const $=id=>document.getElementById(id);
+let timer=null, fieldId=0;
 
-$("mode").addEventListener("change", () => {
-  $("attributeBox").style.display =
-    $("mode").value === "attribute" ? "block" : "none";
-});
+function modeOptions(selected="text"){
+  return [["text","Text"],["href","href / link"],["src","src"],["attribute","HTML attribute"],["html","Raw HTML"]]
+    .map(([v,t])=>`<option value="${v}" ${v===selected?"selected":""}>${t}</option>`).join("");
+}
+
+function addField(name="",selector="",mode="text",attribute=""){
+  fieldId++;
+  const div=document.createElement("div");
+  div.className="field";
+  div.dataset.id=fieldId;
+  div.innerHTML=`
+    <div class="field-grid">
+      <div><label>Field name</label><input class="fname" value="${escapeAttr(name)}" placeholder="Title"></div>
+      <div class="wide"><label>CSS selector</label><input class="fselector" value="${escapeAttr(selector)}" placeholder="h3 a"></div>
+      <div><label>Extract</label><select class="fmode" onchange="toggleAttr(this)">${modeOptions(mode)}</select></div>
+      <div class="fattr ${mode==="attribute"?"":"hidden"}"><label>Attribute</label><input class="fattribute" value="${escapeAttr(attribute)}" placeholder="data-id / alt"></div>
+      <button class="danger" style="width:auto;margin:0" onclick="this.closest('.field').remove()">Remove</button>
+    </div>`;
+  $("fields").appendChild(div);
+}
+
+function toggleAttr(sel){
+  const box=sel.closest(".field").querySelector(".fattr");
+  box.classList.toggle("hidden",sel.value!=="attribute");
+}
+
+function getFields(){
+  return [...document.querySelectorAll(".field")].map(x=>({
+    name:x.querySelector(".fname").value.trim(),
+    selector:x.querySelector(".fselector").value.trim(),
+    mode:x.querySelector(".fmode").value,
+    attribute:x.querySelector(".fattribute").value.trim()
+  })).filter(x=>x.name||x.selector);
+}
+
+function clearFields(){ $("fields").innerHTML=""; }
+
+function addProductPreset(){
+  clearFields();
+  addField("Title","h3 a","attribute","title");
+  addField("Price","p.price_color","text");
+  addField("Availability","p.instock.availability","text");
+  addField("Rating","p.star-rating","attribute","class");
+  addField("URL","h3 a","href");
+  addField("Image","img","src");
+}
+
+function addRecipePreset(){
+  clearFields();
+  addField("Recipe title","h1","text");
+  addField("Ingredients",".ingredient","text");
+  addField("Instructions",".instructions","text");
+  addField("Image","img","src");
+}
 
 async function startScraping(){
   $("error").innerHTML="";
-  $("download").style.display="none";
-
+  hideDownloads();
+  $("status").textContent="Starting";
   const payload={
     start_url:$("url").value.trim(),
     item_selector:$("item").value.trim(),
     next_selector:$("next").value.trim(),
     max_pages:Number($("pages").value),
     delay:Number($("delay").value),
-    field_mode:$("mode").value,
-    field_selector:$("attribute").value.trim()
+    fields:getFields()
   };
-
   try{
-    const r=await fetch("/start",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(payload)
-    });
+    const r=await fetch("/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     const data=await r.json();
     if(!r.ok) throw new Error(data.error||"Could not start.");
-    $("download").style.display="none";
     poll();
-  }catch(e){
-    $("error").innerHTML='<div class="error">'+escapeHtml(e.message)+'</div>';
-  }
+  }catch(e){showError(e.message)}
 }
 
-async function stopScraping(){
-  await fetch("/stop",{method:"POST"});
-}
+async function stopScraping(){await fetch("/stop",{method:"POST"});}
 
-async function poll(){
+function poll(){
   clearInterval(timer);
-  await update();
+  update();
   timer=setInterval(update,1000);
 }
 
 async function update(){
   try{
-    const r=await fetch("/status");
-    const d=await r.json();
-
+    const r=await fetch("/status"),d=await r.json();
     $("status").textContent=d.running?"Running":"Idle";
     $("page").textContent=d.page;
     $("items").textContent=d.items;
-
     $("logs").textContent=(d.logs||[]).join("\n");
     $("logs").scrollTop=$("logs").scrollHeight;
-
-    if(d.error){
-      $("error").innerHTML='<div class="error">'+escapeHtml(d.error)+'</div>';
-    }
-
-    if(!d.running && d.items>0){
-      $("download").style.display="block";
+    if(d.error) showError(d.error);
+    if(!d.running){
+      clearInterval(timer);
+      if(d.items>0){showDownloads();renderPreview(d.columns||["Title"],d.results||[]);}
     }
   }catch(e){}
 }
 
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g,m=>({
-    "&":"&amp;","<":"&lt;",">":"&gt;",
-    '"':"&quot;","'":"&#039;"
-  }[m]));
+function renderPreview(cols,rows){
+  $("previewHint").classList.add("hidden");
+  $("previewWrap").classList.remove("hidden");
+  const table=$("preview");
+  table.innerHTML="";
+  const tr=document.createElement("tr");
+  cols.forEach(c=>{const th=document.createElement("th");th.textContent=c;tr.appendChild(th)});
+  table.appendChild(tr);
+  rows.forEach(row=>{
+    const r=document.createElement("tr");
+    row.forEach(v=>{const td=document.createElement("td");td.textContent=v??"";r.appendChild(td)});
+    table.appendChild(r);
+  });
+  detectTheme(cols,rows);
 }
+
+function detectTheme(cols,rows){
+  const text=(cols||[]).join(" ").toLowerCase();
+  let theme="General";
+  if(/recipe|ingredient|instruction|serving|cook|prep/.test(text)) theme="🍳 Recipe";
+  else if(/price|product|stock|sku|brand/.test(text)) theme="🛒 Product";
+  else if(/article|author|published|headline/.test(text)) theme="📰 Article";
+  else if(/channel|subscriber|views|video/.test(text)) theme="▶ Channel";
+  $("detectedTheme").textContent=theme;
+}
+
+function showDownloads(){["csv","xlsx","json"].forEach(id=>$(id).classList.remove("hidden"))}
+function hideDownloads(){["csv","xlsx","json"].forEach(id=>$(id).classList.add("hidden"))}
+function showError(msg){$("error").innerHTML='<div class="error">'+escapeHtml(msg)+'</div>'}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function escapeAttr(s){return escapeHtml(s).replace(/`/g,"&#096;")}
 </script>
 </body>
-  </html>
-  
+</html>
